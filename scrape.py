@@ -3,6 +3,8 @@ import re
 import httplib2
 import os
 import requests
+import mechanize
+import cookielib
 from lxml import html
 from time import mktime
 from datetime import datetime
@@ -16,19 +18,19 @@ from oauth2client.file import Storage
 SCOPES = 'https://www.googleapis.com/auth/calendar'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Google Calendar API Python Quickstart'
-login_url = 'https://www.gotsport.com/asp/users/login_menu.asp'
+login_url = 'https://www.gotsport.com/asp/teams/login.asp'
 got_soccer_html = 'placeholder'
 
 payload = {
-	"username": "<USER NAME>", 
-	"password": "<PASSWORD>", 
+	"UserName": "<USER NAME>", 
+	"Password": "<PASSWORD>", 
 	#"csrfmiddlewaretoken": "<CSRF_TOKEN>" <- most modern sites should have this for security, but GotSoccer doesn't have it?
 }
 
 def login():
 	session_requests = requests.session()
 	login_result = session_requests.post(login_url, data = payload, headers = dict(referer=login_url))
-	got_soccer_html = result = session_requests.get(got_soccer_url, headers = dict(referer = got_soccer_url))
+	got_soccer_html = session_requests.get(got_soccer_url, headers = dict(referer = got_soccer_url))
 	return got_soccer_html
 
 def get_credentials():
