@@ -15,10 +15,16 @@ from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 
+try:
+    import argparse
+    flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
+except ImportError:
+    flags = None
+
 SCOPES = 'https://www.googleapis.com/auth/calendar'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Google Calendar API Python Quickstart'
-login_url = 'https://www.gotsport.com/asp/teams/login.asp'
+login_url = 'https://www.gotsport.com/asp/users/login_menu.asp'
 got_soccer_html = 'placeholder'
 
 payload = {
@@ -28,9 +34,21 @@ payload = {
 }
 
 def login():
-	session_requests = requests.session()
-	login_result = session_requests.post(login_url, data = payload, headers = dict(referer=login_url))
-	got_soccer_html = session_requests.get(got_soccer_url, headers = dict(referer = got_soccer_url))
+	br = mechanize.Browser()
+
+	cookiejar = cookielib.LWPCookieJar()
+	br.set_cookiejar(cookiejar)
+	br.set_handle_robots(False)
+	br.open(login_url)
+	for form in br.forms():  
+	  if str(form.attrs.get("id")) == "ORGLoginForm":
+	    br.form = form
+	    break
+	br.form['UserName'] = '<USERNAME>'
+	br.form['Password'] = '<PASSWORD>'
+	br.submit()
+
+	got_soccer_html = br.response().read()
 	return got_soccer_html
 
 def get_credentials():
@@ -46,7 +64,7 @@ def get_credentials():
     credential_dir = os.path.join(home_dir, '.credentials')
     if not os.path.exists(credential_dir):
         os.makedirs(credential_dir)
-    credential_path = os.path.join(credential_dir, 'calendar-python-quickstart.json')
+    credential_path = os.path.join(credential_dir, 'credentials.json')
 
     store = Storage(credential_path)
     credentials = store.get()
