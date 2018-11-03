@@ -5,6 +5,7 @@ import os
 import requests
 import mechanize
 import cookielib
+import getpass
 from lxml import html
 from time import mktime
 from datetime import datetime
@@ -25,13 +26,6 @@ SCOPES = 'https://www.googleapis.com/auth/calendar'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Google Calendar API Python Quickstart'
 login_url = 'https://www.gotsport.com/asp/users/login_menu.asp'
-got_soccer_html = 'placeholder'
-
-payload = {
-	"UserName": "<USER NAME>", 
-	"Password": "<PASSWORD>", 
-	#"csrfmiddlewaretoken": "<CSRF_TOKEN>" <- most modern sites should have this for security, but GotSoccer doesn't have it?
-}
 
 def login():
 	br = mechanize.Browser()
@@ -39,17 +33,18 @@ def login():
 	cookiejar = cookielib.LWPCookieJar()
 	br.set_cookiejar(cookiejar)
 	br.set_handle_robots(False)
+	br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36')]
 	br.open(login_url)
 	for form in br.forms():  
 	  if str(form.attrs.get("id")) == "ORGLoginForm":
 	    br.form = form
 	    break
-	br.form['UserName'] = '<USERNAME>'
-	br.form['Password'] = '<PASSWORD>'
+	br.form['UserName'] = raw_input("Username: ")
+	br.form['Password'] = getpass.getpass()
 	br.submit()
-
-	got_soccer_html = br.response().read()
-	return got_soccer_html
+	resp = br.open(r'http://www.gotsport.com/asp/directors/club/schedule_overview.asp')
+	
+	return resp.read()
 
 def get_credentials():
     """Gets valid user credentials from storage.
@@ -86,14 +81,16 @@ def main():
 	page = login()
 	got_soccer = BeautifulSoup(page, 'html.parser')
 	main_div = got_soccer.find("div", {"class": "PageTabBox"})
-	calendar_sections = main_div.findAll("table", recursive = False)[1].find("tbody").find("tr").find("td").findAll("table", recursive = False)
-	month_and_year = datetime.strptime(unicode(calendar_sections[1].find("tbody").find("tr").find("td").find("div").string).replace(u'\xa0', ' ').strip(), '%B %Y')
+	tables = main_div.findAll("table", recursive = False)
+	main_tr = tables[1].find("tr")
+	main_td = main_tr.find("td")
+	calendar_sections = main_td.findAll("table", recursive = False)
+	month_and_year = datetime.strptime(unicode(calendar_sections[1].find("tr").find("td").find("div").string).replace(u'\xa0', ' ').strip(), '%B %Y')
 
 	month = month_and_year.month
 	year = month_and_year.year
 
-	body = calendar_sections[2].find("tbody")
-	rows = body.findAll("tr", recursive = False)
+	rows = calendar_sections[2].findAll("tr", recursive = False)
 
 	days = []
 	for row in rows[1:]:
@@ -109,9 +106,9 @@ def main():
 		events = []
 		events_table = day.findAll("table", recursive = False)
 		if len(events_table) > 1:
-			rows = events_table[1].find("tbody").findAll("tr", recursive = False)
+			rows = events_table[1].findAll("tr", recursive = False)
 			if len(rows) > 0:
-				date = int(unicode(day.find("table").find("tbody").find("tr").find("td").string))
+				date = int(unicode(day.find("table").find("tr").find("td").string))
 				for event in rows:
 					age_group = unicode(event.find("td", class_ = 'AgeGroupBox').string)
 					event_name = unicode(event.find("td", class_ = 'TinyHeading').find("a").string)
