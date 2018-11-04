@@ -74,13 +74,8 @@ def get_credentials():
         print 'Storing credentials to ' + credential_path
     return credentials
 
-def upload(day_list, month_and_year):
+def upload(day_list, month_and_year, service):
     """uploads events to Google Calendar"""
-    credentials = get_credentials()
-    http = credentials.authorize(httplib2.Http())
-
-    service = discovery.build('calendar', 'v3', http=http)
-
     for day in day_list:
         events_table = day.findAll("table", recursive=False)
         if len(events_table) > 1:
@@ -90,10 +85,6 @@ def upload(day_list, month_and_year):
                 for event in rows:
                     event_meta = get_meta(event, month_and_year, date)
                     service.events().insert(calendarId='primary', body=event_meta).execute()
-                    print ('Event created: '+event_meta['summary']+'\n'
-                           +event_meta['start']['dateTime']+' - '
-                           +event_meta['end']['dateTime']+'\n'
-                           +event_meta['location'])
 
 def get_meta(event, month_and_year, date):
     """extracts the event data from the GotSoccer calendar"""
@@ -124,6 +115,10 @@ def get_meta(event, month_and_year, date):
 
 def main():
     """begin scraping"""
+    credentials = get_credentials()
+    http = credentials.authorize(httplib2.Http())
+
+    service = discovery.build('calendar', 'v3', http=http)
     got_soccer = BeautifulSoup(login(), 'html.parser')
     calendar_sections = (got_soccer.find("div", {"class": "PageTabBox"})
                          .findAll("table", recursive=False)[1]
@@ -148,7 +143,7 @@ def main():
                 day_list.append(day)
         days.extend(day_list)
 
-    upload(days, month_and_year)
+    upload(days, month_and_year, service)
 
 if __name__ == '__main__':
     main()
